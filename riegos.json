@@ -1,5 +1,5 @@
 {
- "exported": "2026-11-23T14:49:58",
+ "exported": "2026-11-23T14:50:02",
  "source": "Riegos de casa (web en GitHub)",
  "plants": {
   "albahaca-esqueje": {
@@ -1646,6 +1646,16 @@
    "planned": false,
    "auto": false,
    "created": "2026-11-23T13:49:58.530Z"
+  },
+  "lmwtbox5ho2im": {
+   "plant": "laurel",
+   "type": "riego",
+   "date": "2026-11-23",
+   "fert": false,
+   "note": "",
+   "planned": false,
+   "auto": false,
+   "created": "2026-11-23T13:50:02.453Z"
   }
  },
  "settings": {
