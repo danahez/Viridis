@@ -1,6 +1,6 @@
 {
- "exported": "2026-11-23T12:56:58",
- "source": "https://claude.ai/artifact/7ENdEkSnKiB9em9NghuCHU",
+ "exported": "2026-11-23T14:49:58",
+ "source": "Riegos de casa (web en GitHub)",
  "plants": {
   "albahaca-esqueje": {
    "acquired": "2026-09-29",
@@ -1636,6 +1636,16 @@
    "planned": true,
    "plant": "zamioculca",
    "type": "trasplante"
+  },
+  "lmwtbou4ivo1o": {
+   "plant": "aloe",
+   "type": "riego",
+   "date": "2026-11-23",
+   "fert": false,
+   "note": "",
+   "planned": false,
+   "auto": false,
+   "created": "2026-11-23T13:49:58.530Z"
   }
  },
  "settings": {
