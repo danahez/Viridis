@@ -1,0 +1,974 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#091726">
+<title>Riegos de casa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
+<style>
+/* Layout: dark "bento" app. A chosen background (gradient or minimal forest) sits behind translucent blocks:
+   main view on the left, summary / today / filters stacked on the right; on phones the blocks stack. */
+:root{
+  --bg:#0a0f12; --surface:rgba(14,21,25,.86); --surface-solid:#131a1e; --surface-2:rgba(255,255,255,.055); --surface-3:rgba(255,255,255,.09);
+  --ink:#eef3f5; --ink-2:#a9b6be; --line:rgba(255,255,255,.09); --line-2:rgba(255,255,255,.18);
+  --rest:#a9c3dc; --rest-soft:rgba(169,195,220,.14); --focus:#9cc6ff;
+  --primary:#e9eef1; --primary-hover:#ffffff; --on-primary:#0b1013;
+  --aqua:#5b9bff; --aqua-soft:rgba(91,155,255,.16); --leaf:#4fd18e; --leaf-soft:rgba(79,209,142,.15);
+  --late:#ff8a76; --late-soft:rgba(255,138,118,.15); --soon:#e6b24e; --soon-soft:rgba(230,178,78,.15);
+  --shadow:0 10px 30px rgba(0,0,0,.35); --shadow-lg:0 24px 60px rgba(0,0,0,.6);
+  --spring:cubic-bezier(.34,1.56,.64,1); --ease:cubic-bezier(.2,.8,.2,1);
+  --f-ui:"Manrope","Geist","Segoe UI",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+.noanim *,.noanim *::before,.noanim *::after{animation:none!important;transition:none!important}
+/* Modo lectura (GitHub sin clave): sin botones de registrar ni de editar */
+.ro .fab,.ro [data-act=quick],.ro [data-act=quickfert],.ro [data-act=log],.ro [data-act=logday],.ro [data-act=plandone],.ro [data-act=newplant],.ro [data-act=editev],.ro [data-qw],.ro [data-lg],.ro [data-ed],.ro details.edit,.ro .sheet [data-save],.ro .sheet [data-del],.ro .sheet [data-arch]{display:none!important}
+.ghbox{display:grid;gap:10px;background:var(--surface-2);border-radius:14px;padding:12px 14px}
+.ghbox .row2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+input[type=password]{width:100%;border:1px solid var(--line);background:var(--surface-2);border-radius:12px;padding:9px 11px}
+html,body{background:var(--bg)}
+body{margin:0;color:var(--ink);font:16px/1.55 var(--f-ui);min-height:100vh;-webkit-font-smoothing:antialiased}
+#bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;background:var(--bg)}
+#bg svg{position:absolute;inset:0;width:100%;height:100%}
+#bg .blob{position:absolute;border-radius:50%;filter:blur(70px);opacity:.55}
+/* Luna: centrada en el margen derecho que queda fuera de los bloques (contenido de 1288 px de ancho).
+   En pantallas estrechas no hay margen libre: se oculta para que no salga como una mancha gris tras los bloques. */
+#bg .moon{position:absolute;top:31vh;right:clamp(0px,calc((100vw - 1288px)/4),420px);width:60px;height:60px;transform:translateX(50%);border-radius:50%;background:#e8efe3;opacity:.62;box-shadow:0 0 70px 34px rgba(207,230,216,.16)}
+@media (max-width:1347px){#bg .moon{display:none}}
+[data-bg="noche"] #bg{background:radial-gradient(110% 80% at 88% -10%,#134a40 0,transparent 55%),radial-gradient(90% 70% at -10% 110%,#10304d 0,transparent 60%),radial-gradient(60% 50% at 50% 50%,#0e1a1d 0,transparent 80%),#090e11}
+[data-bg="aurora"] #bg{background:#080c10}
+[data-bg="liso"] #bg{background:#0c1013}
+@media (prefers-reduced-motion:no-preference){[data-bg="aurora"] #bg .blob{animation:drift 26s ease-in-out infinite alternate}[data-bg="aurora"] #bg .blob:nth-child(2){animation-duration:32s;animation-delay:-8s}[data-bg="aurora"] #bg .blob:nth-child(3){animation-duration:38s;animation-delay:-15s}}
+@keyframes drift{to{transform:translate(6vw,4vh) scale(1.15)}}
+.wrap{position:relative;z-index:1;max-width:1320px;margin:0 auto;padding-inline:16px;padding-block:18px 110px}
+h1,h2,h3{font-weight:700;margin:0;text-wrap:balance;letter-spacing:-.02em}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:disabled{opacity:.55;cursor:default}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:12px;top:-60px;z-index:50;background:var(--primary);color:var(--on-primary);padding:10px 14px;border-radius:12px;font-weight:700;text-decoration:none}
+.skip:focus{top:12px}
+.glass{background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(1.2);-webkit-backdrop-filter:blur(18px) saturate(1.2)}
+
+header.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;margin-bottom:14px;padding:10px 12px 10px 14px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.orb{width:32px;height:32px;border-radius:10px;background:linear-gradient(150deg,var(--leaf),var(--aqua));flex:none;display:grid;place-items:center;color:#06110c}
+.orb svg{width:16px;height:16px}
+.brand h1{font-size:1.1rem;font-weight:800}
+.brand small{display:block;color:var(--ink-2);font-size:.8rem;font-weight:500}
+.topr{display:flex;gap:8px;align-items:center}
+nav.tabs{position:relative;display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface-2);padding:4px;border-radius:999px;min-width:330px}
+nav.tabs .ind{position:absolute;top:4px;bottom:4px;left:4px;width:calc((100% - 8px)/3);background:var(--primary);border-radius:999px;transition:transform .4s var(--spring)}
+nav.tabs button{position:relative;z-index:1;border:0;background:transparent;padding:9px 16px;border-radius:999px;font-weight:700;font-size:.86rem;color:var(--ink-2);transition:color .25s}
+nav.tabs button:hover{color:var(--ink)}
+nav.tabs button[aria-selected="true"]{color:var(--on-primary)}
+.iconbtn{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface-2);display:grid;place-items:center;color:var(--ink-2);transition:transform .3s var(--spring),color .2s,background .2s}
+.iconbtn:hover{color:var(--ink);background:var(--surface-3);transform:rotate(45deg)}
+.iconbtn:active{transform:rotate(45deg) scale(.9)}
+.iconbtn svg{width:18px;height:18px}
+@media (max-width:640px){header.top{padding:10px}.topr{width:100%}nav.tabs{min-width:0;flex:1}nav.tabs button{padding:7px 4px;font-size:.82rem}}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;grid-template-areas:"banner banner" "view stats" "view today" "view filters" "view .";grid-template-rows:auto auto auto auto 1fr;gap:14px;align-items:start}
+#banner{grid-area:banner} #view{grid-area:view} #stats{grid-area:stats} #todayb{grid-area:today} #filters{grid-area:filters}
+@media (max-width:960px){.layout{grid-template-columns:minmax(0,1fr);grid-template-areas:"banner" "stats" "filters" "view" "today";grid-template-rows:none}}
+.banner{padding:10px 14px;font-size:.88rem;color:var(--ink-2)}
+
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;background:none;border:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;padding:0}
+.stat{text-align:left;border:1px solid var(--line);background:var(--surface);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-radius:18px;padding:14px;display:grid;gap:2px;transition:transform .25s var(--spring),border-color .2s,background .2s}
+.stat:hover{transform:translateY(-3px);border-color:var(--line-2)}
+.stat:active{transform:scale(.96)}
+.stat b{font-size:2rem;font-weight:800;letter-spacing:-.04em;line-height:1.05;font-variant-numeric:tabular-nums}
+.stat small{color:var(--ink-2);font-weight:600;font-size:.82rem;line-height:1.25}
+.stat.late b{color:var(--late)} .stat.now b{color:var(--aqua)} .stat.soon b{color:var(--soon)}
+.side{padding:16px}
+.side h3{font-size:.95rem;margin-bottom:8px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.side h3 small{font-size:.8rem;color:var(--ink-2);font-weight:600}
+.sline{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:.9rem;font-weight:600;border-bottom:1px solid var(--line)}
+.sline:last-child{border-bottom:0}
+.sline em{font-style:normal;margin-left:auto;font-size:.8rem;color:var(--leaf);font-weight:600;white-space:nowrap}
+.sline em.blue{color:var(--aqua)}
+.sline .mk{width:9px;height:9px}
+
+.filters{padding:14px 16px;display:grid;gap:8px}
+.frow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.flabel{flex-basis:100%;font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-2);font-weight:700}
+.chip{display:inline-flex;align-items:center;gap:7px;min-height:36px;border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:6px 13px 6px 10px;font-size:.86rem;font-weight:600;line-height:1.25;transition:transform .2s var(--spring),background .2s,border-color .2s,opacity .2s}
+.chip:hover{border-color:var(--line-2);background:var(--surface-3)}
+.chip:active{transform:scale(.92)}
+.chip .dot{width:9px;height:9px;border-radius:50%;background:var(--c,var(--aqua));transition:transform .25s var(--spring),background .2s}
+.chip[aria-pressed="false"]{opacity:.6;background:transparent;border-style:dashed;text-decoration:line-through;text-decoration-color:var(--ink-2)}
+.chip[aria-pressed="false"] .dot{background:transparent;box-shadow:inset 0 0 0 1.5px var(--c);transform:scale(.8)}
+.linkbtn{border:0;background:none;color:var(--ink-2);font-size:.86rem;padding:8px 10px;text-decoration:underline;text-underline-offset:3px;font-weight:600;border-radius:8px;transition:background .2s,color .2s}
+.linkbtn:hover{background:var(--surface-2);color:var(--ink)}
+.fhead{cursor:pointer;font-weight:700;font-size:.9rem;list-style:none;display:flex;align-items:center;gap:8px}
+.fhead::-webkit-details-marker{display:none}
+.fhead::marker{content:""}
+.fhead::after{content:"";margin-left:auto;width:7px;height:7px;border-right:2px solid var(--ink-2);border-bottom:2px solid var(--ink-2);transform:rotate(45deg);transition:transform .3s var(--spring)}
+details[open]>.fhead::after{transform:rotate(225deg)}
+
+.panel{padding:20px}
+@media (max-width:640px){.panel{padding:14px}}
+.today-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px}
+.today-head h2{font-size:1.8rem;font-weight:800;letter-spacing:-.04em}
+.today-head .date{color:var(--ink-2);font-size:.88rem;font-weight:500}
+.tip{display:flex;gap:10px;align-items:flex-start;background:var(--surface-2);border-radius:14px;padding:12px 14px;font-size:.92rem;margin-bottom:6px;color:var(--ink-2)}
+.tip b{color:var(--ink);font-weight:700}
+.summary{display:none}
+.group{margin-top:20px}
+.group h3{font-size:.76rem;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-2);margin-bottom:8px;font-weight:700;display:flex;align-items:center;gap:8px}
+.group h3 .cnt{font-size:.72rem;letter-spacing:0;background:var(--surface-3);color:var(--ink);border-radius:999px;padding:0 8px;line-height:1.6}
+.group .ghint{font-size:.84rem;color:var(--ink-2);margin:-2px 0 8px}
+.rows{display:grid;gap:8px;list-style:none;margin:0;padding:0}
+.row{display:grid;grid-template-columns:4px minmax(0,1fr) auto;gap:14px;align-items:center;padding:12px 12px 12px 12px;border-radius:16px;background:var(--surface-2);border:1px solid transparent;transition:transform .25s var(--ease),background .25s,border-color .25s}
+.row:hover{transform:translateY(-2px);background:var(--surface-3);border-color:var(--line)}
+.row .bar{width:4px;align-self:stretch;border-radius:4px;background:var(--c)}
+.row .main{min-width:0}
+.row .name{font-weight:700;font-size:1.02rem;display:flex;gap:6px 10px;align-items:center;flex-wrap:wrap}
+.when{display:inline-flex;align-items:center;gap:5px;font-size:.8rem;font-weight:700;padding:2px 9px 2px 7px;border-radius:999px;line-height:1.5;white-space:nowrap}
+.when svg{width:13px;height:13px;flex:none}
+.row .sub{font-size:.86rem;color:var(--ink-2);font-weight:500;margin-top:2px}
+.late .when,.when.late{color:var(--late);background:var(--late-soft)} .now .when,.when.now{color:var(--aqua);background:var(--aqua-soft)} .soon .when,.when.soon{color:var(--soon);background:var(--soon-soft)} .later .when,.when.later{color:var(--ink-2);background:var(--surface-3)} .rest .when,.when.rest{color:var(--rest);background:var(--rest-soft)}
+.row.rest{background:transparent;border:1px dashed var(--line-2)}
+.row.rest .name{color:var(--ink-2)}
+.linkname{border:0;background:none;padding:0;font:inherit;font-weight:700;color:inherit;text-align:left;border-radius:6px}
+.linkname:hover{text-decoration:underline;text-underline-offset:3px}
+@media (max-width:560px){.row{grid-template-columns:4px minmax(0,1fr)}.row .acts{grid-column:2}.btn{min-height:44px}}
+.acts{display:flex;gap:6px}
+.btn{border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:9px 15px;min-height:40px;font-weight:700;font-size:.88rem;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;transition:transform .18s var(--spring),background .2s,border-color .2s,box-shadow .2s,color .2s}
+.btn:hover{border-color:var(--line-2);background:var(--surface-3);transform:translateY(-1px)}
+.btn:active{transform:scale(.93)}
+.btn.primary{border:0;background:var(--primary);color:var(--on-primary)}
+.btn.primary:hover{background:var(--primary-hover);box-shadow:0 6px 18px rgba(233,238,241,.18)}
+.btn.green{border:0;background:var(--leaf);color:#05140c}
+.btn.green:hover{filter:brightness(1.08);box-shadow:0 6px 18px rgba(79,209,142,.3)}
+.btn.done{background:var(--leaf)!important;color:#05140c!important;border-color:transparent}
+.btn .ck{stroke-dasharray:20;animation:draw .45s var(--ease) both}
+@keyframes draw{from{stroke-dashoffset:20}to{stroke-dashoffset:0}}
+.btn.danger{color:var(--late)}
+.btn.danger:hover{border-color:var(--late)}
+.btn svg{width:15px;height:15px;flex:none}
+.btn.more{width:40px;padding:0;justify-content:center}
+.empty{color:var(--ink-2);font-size:.92rem;padding:16px;text-align:center;border:1px dashed var(--line-2);border-radius:14px}
+
+.calhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px}
+.calhead h2{font-size:1.45rem;font-weight:800;letter-spacing:-.03em}
+.calhead h2::first-letter{text-transform:uppercase}
+.calhead .btn:not(.primary){width:40px;height:40px;padding:0;justify-content:center}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.dow{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-2);text-align:center;padding:2px 0 4px;font-weight:700}
+.day{min-height:100px;border-radius:14px;background:var(--surface-2);border:1px solid transparent;padding:6px;text-align:left;display:flex;flex-direction:column;gap:4px;min-width:0;overflow:hidden;transition:transform .2s var(--spring),border-color .2s,background .2s}
+.day:hover{background:var(--surface-3);border-color:var(--line)}
+.day:active{transform:scale(.95)}
+.day.out{opacity:.35}
+.day .n{font-size:.78rem;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink-2);width:24px;height:24px;display:grid;place-items:center;border-radius:50%}
+.day.today .n{background:var(--aqua);color:#fff}
+.day.sel{background:var(--aqua-soft);border-color:color-mix(in srgb,var(--aqua) 45%,transparent)}
+.evs{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ev{display:flex;align-items:center;gap:5px;font-size:.74rem;line-height:1.2;min-width:0;white-space:nowrap;font-weight:600}
+.ev b{font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.mk{flex:none;width:8px;height:8px;border-radius:50%;background:var(--c)}
+.mk.fert{box-shadow:0 0 0 1.5px var(--surface-solid),0 0 0 3px var(--leaf)}
+.mk.sq{border-radius:2px}
+.mk.dia{border-radius:1px;transform:rotate(45deg) scale(.85)}
+.mk.tri{border-radius:0;clip-path:polygon(50% 0,100% 100%,0 100%)}
+.mk.proj{background:transparent;border:1.5px dashed var(--c);clip-path:none;transform:none}
+.mk.proj.fertp{border-color:var(--leaf);border-style:dotted;border-width:2px}
+.ev.proj b,.ev.planned b{color:var(--ink-2)}
+.more{font-size:.68rem;color:var(--ink-2);font-weight:600}
+@media (max-width:700px){
+  .cal{gap:4px}
+  .day{min-height:56px;padding:4px;border-radius:11px}
+  .evs{flex-direction:row;flex-wrap:wrap;gap:3px}
+  .ev b,.ev .lbl{display:none}
+  .mk{width:7px;height:7px}
+  .day .n{width:20px;height:20px;font-size:.72rem}
+}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:14px;font-size:.82rem;color:var(--ink-2);font-weight:600}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend .mk{--c:var(--ink-2)}
+.dayp{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.dayp h3{font-size:1.05rem;margin-bottom:8px}
+.dline{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line)}
+.dline:last-child{border-bottom:0}
+.dline .mk{margin-top:7px}
+.dline .txt{flex:1;min-width:0}
+.dline .meta{font-size:.8rem;color:var(--ink-2)}
+.dline .note{font-size:.86rem;margin-top:2px;overflow-wrap:anywhere;color:var(--ink-2)}
+.tag{font-size:.74rem;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--leaf-soft);color:var(--leaf);margin-left:5px}
+.tag.blue{background:var(--aqua-soft);color:var(--aqua)}
+.tag.grey{background:var(--surface-3);color:var(--ink-2)}
+
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.pcard{position:relative;overflow:hidden;text-align:left;border:1px solid transparent;background:var(--surface-2);border-radius:18px;padding:16px 16px 14px 20px;display:grid;gap:10px;align-content:start;min-width:0;transition:transform .25s var(--ease),background .25s,border-color .25s}
+.pcard::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c)}
+.pcard:hover{transform:translateY(-3px);background:var(--surface-3);border-color:var(--line)}
+.pcard:active{transform:scale(.97)}
+.pcard h3{font-size:1.06rem;display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.pcard .meta{font-size:.84rem;color:var(--ink-2);display:flex;flex-wrap:wrap;gap:4px 12px}
+.pcard .meta span{display:inline-flex;align-items:center;gap:5px}
+.pcard .meta svg{width:13px;height:13px;flex:none;opacity:.8}
+.pcard .notes{font-size:.84rem;color:var(--ink-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;border-top:1px solid var(--line);padding-top:8px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:.86rem;margin:0}
+.ficha{display:grid;gap:12px;margin-bottom:16px}
+.ficha .top{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ficha .box{background:var(--surface-2);border-radius:14px;padding:12px 14px}
+.ficha .notes{white-space:pre-wrap;font-size:.92rem;color:var(--ink)}
+details.edit{border-top:1px solid var(--line);padding-top:12px;margin-top:4px}
+details.edit>summary{cursor:pointer;font-weight:700;list-style:none;display:flex;align-items:center;gap:8px;padding:6px 0;margin-bottom:10px}
+details.edit>summary::-webkit-details-marker{display:none}
+details.edit>summary::after{content:"";margin-left:auto;width:7px;height:7px;border-right:2px solid var(--ink-2);border-bottom:2px solid var(--ink-2);transform:rotate(45deg);transition:transform .3s var(--spring)}
+details.edit[open]>summary::after{transform:rotate(225deg)}
+.kv dt{color:var(--ink-2)} .kv dd{margin:0;font-weight:700;font-variant-numeric:tabular-nums}
+
+.fab{position:fixed;right:max(18px,env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:20;border:0;background:var(--primary);color:var(--on-primary);border-radius:999px;padding:14px 22px 14px 18px;font-weight:800;font-size:.96rem;display:flex;gap:8px;align-items:center;box-shadow:var(--shadow-lg);transition:transform .25s var(--spring),box-shadow .25s,background .2s}
+.fab:hover{transform:translateY(-3px);background:var(--primary-hover);box-shadow:0 18px 40px rgba(0,0,0,.6),0 0 0 6px rgba(233,238,241,.08)}
+.fab:active{transform:scale(.93)}
+.fab svg{width:18px;height:18px}
+
+.overlay{position:fixed;inset:0;z-index:30;background:rgba(3,6,8,.6);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);display:flex;align-items:flex-end;justify-content:center;animation:fade .2s ease-out}
+@media (min-width:700px){.overlay{align-items:center;padding:24px}}
+.sheet{width:100%;max-width:580px;max-height:92vh;overflow:auto;padding:22px 18px calc(18px + env(safe-area-inset-bottom,0px));border-radius:24px 24px 0 0;background:var(--surface-solid);border:1px solid var(--line);box-shadow:var(--shadow-lg);animation:up .36s var(--spring)}
+@media (min-width:700px){.sheet{border-radius:22px}}
+@keyframes fade{from{opacity:0}}
+@keyframes up{from{transform:translateY(30px);opacity:0}}
+.sheet h2{font-size:1.3rem;margin-bottom:14px;font-weight:800;letter-spacing:-.03em}
+.field{display:grid;gap:6px;margin-bottom:14px}
+.field>label,.flab{font-size:.76rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-2);font-weight:700}
+input[type=text],input[type=date],input[type=number],select,textarea{width:100%;border:1px solid var(--line);background:var(--surface-2);border-radius:12px;padding:9px 11px;transition:border-color .2s,background .2s,box-shadow .2s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--aqua);background:var(--surface-3);box-shadow:0 0 0 3px var(--aqua-soft)}
+select option{background:var(--surface-solid)}
+textarea{resize:vertical;min-height:60px}
+.seg{display:flex;gap:2px;background:var(--surface-2);padding:4px;border-radius:999px;flex-wrap:wrap}
+.seg button{flex:1;border:0;background:transparent;padding:7px 10px;border-radius:999px;font-weight:700;color:var(--ink-2);font-size:.84rem;transition:background .2s,color .2s,transform .18s var(--spring)}
+.seg button:hover{color:var(--ink)}
+.seg button:active{transform:scale(.94)}
+.seg button[aria-pressed="true"]{background:var(--primary);color:var(--on-primary)}
+.inline{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.inline input[type=date]{flex:1;min-width:150px}
+.prow{display:grid;gap:8px;padding:10px 12px;border-radius:14px;background:var(--surface-2);margin-bottom:6px;animation:up .3s var(--spring)}
+.prow .ph{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.prow .ph b{display:flex;align-items:center;gap:8px;font-weight:700}
+.check{display:inline-flex;align-items:center;gap:6px;font-size:.86rem;cursor:pointer;font-weight:600}
+.check input{width:17px;height:17px;accent-color:var(--leaf)}
+.months{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+@media (min-width:520px){.months{grid-template-columns:repeat(12,minmax(0,1fr))}}
+.months label{display:grid;gap:3px;text-align:center;font-size:.7rem;color:var(--ink-2);font-weight:700}
+.months input{padding:6px 2px;text-align:center;font-variant-numeric:tabular-nums}
+.months.cur-m label.cur{color:var(--aqua)}
+.months.cur-m label.cur input{border-color:var(--aqua)}
+.mtoggle{border:1px solid var(--line);background:transparent;border-radius:10px;padding:6px 0;font-size:.76rem;font-weight:700;color:var(--ink-2);transition:background .2s,color .2s,transform .18s var(--spring)}
+.mtoggle:active{transform:scale(.9)}
+.mtoggle[aria-pressed="true"]{background:var(--leaf);color:#05140c;border-color:transparent}
+.hint{font-size:.86rem;color:var(--ink-2)}
+.mtoggle.rest[aria-pressed="true"]{background:var(--rest);color:#0b1520}
+.sheet .foot{display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap;margin-top:16px}
+.sheet .foot .r{display:flex;gap:8px;margin-left:auto}
+.colors{display:flex;gap:8px;flex-wrap:wrap}
+.colors button{width:26px;height:26px;border-radius:50%;border:0;background:var(--c);transition:transform .2s var(--spring),box-shadow .2s}
+.colors button:hover{transform:scale(1.12)}
+.colors button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--surface-solid),0 0 0 4px var(--ink)}
+.hist{max-height:260px;overflow:auto;background:var(--surface-2);border-radius:14px;padding:0 12px}
+.bgopts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.bgopt{border:2px solid transparent;background:var(--surface-2);border-radius:16px;padding:6px 6px 10px;text-align:left;display:grid;gap:8px;transition:transform .22s var(--spring),border-color .2s}
+.bgopt:hover{transform:translateY(-2px)}
+.bgopt:active{transform:scale(.96)}
+.bgopt[aria-pressed="true"]{border-color:var(--aqua)}
+.bgopt .pv{height:96px;border-radius:11px;position:relative;overflow:hidden}
+.bgopt .pv svg{position:absolute;inset:0;width:100%;height:100%}
+.bgopt .pv .blob{position:absolute;border-radius:50%;filter:blur(16px);opacity:.6}
+.bgopt b{font-size:.86rem;padding-inline:4px}
+.bgopt small{display:block;color:var(--ink-2);font-size:.74rem;font-weight:500;padding-inline:4px;line-height:1.3}
+.pv-noche{background:radial-gradient(110% 80% at 88% -10%,#134a40 0,transparent 55%),radial-gradient(90% 70% at -10% 110%,#10304d 0,transparent 60%),#090e11}
+.pv-aurora{background:#080c10}
+.pv-liso{background:#0c1013;box-shadow:inset 0 0 0 1px var(--line)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(86px + env(safe-area-inset-bottom,0px));z-index:40;padding:10px 12px 10px 16px;border-radius:999px;background:var(--primary);color:var(--on-primary);box-shadow:var(--shadow-lg);display:flex;gap:12px;align-items:center;font-size:.88rem;font-weight:600;max-width:calc(100% - 32px);animation:toast .4s var(--spring)}
+.toast .linkbtn{color:var(--on-primary);opacity:.75;text-decoration:underline}
+.toast .linkbtn:hover{background:transparent;opacity:1}
+@keyframes toast{from{transform:translate(-50%,18px);opacity:0}}
+.confirm{background:var(--late-soft);border-radius:12px;padding:10px 12px;margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.88rem;animation:up .25s var(--spring)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+
+<a class="skip" href="#view">Saltar al contenido</a>
+<div id="bg" aria-hidden="true"></div>
+<div class="wrap">
+  <header class="top glass">
+    <div class="brand"><div class="orb" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 3c3.5 4.2 6 7.4 6 10.5A6 6 0 0 1 6 13.5C6 10.4 8.5 7.2 12 3z"/></svg></div><div><h1>Riegos de casa</h1><small>Leganés · calendario de cuidados</small></div></div>
+    <div class="topr">
+      <nav class="tabs" role="tablist" aria-label="Secciones"><span class="ind" aria-hidden="true"></span>
+        <button role="tab" data-tab="hoy" aria-selected="true" aria-controls="view">Hoy</button>
+        <button role="tab" data-tab="cal" aria-selected="false" aria-controls="view">Calendario</button>
+        <button role="tab" data-tab="plantas" aria-selected="false" aria-controls="view">Plantas</button>
+      </nav>
+      <button class="iconbtn" id="settings" type="button" aria-label="Ajustes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    </div>
+  </header>
+  <div class="layout">
+    <div id="banner" class="banner glass" hidden></div>
+    <main id="view" class="panel glass" tabindex="-1" role="tabpanel" aria-live="polite" aria-busy="false"><p class="empty">Cargando tus plantas…</p></main>
+    <section id="stats" class="stats" aria-label="Resumen"></section>
+    <section id="todayb" class="side glass"></section>
+    <section id="filters" class="filters glass"></section>
+  </div>
+</div>
+<button class="fab" id="fab" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3c3.5 4.2 6 7.4 6 10.5A6 6 0 0 1 6 13.5C6 10.4 8.5 7.2 12 3z"/></svg>Registrar</button>
+<div id="modal"></div>
+<div id="toast"></div>
+
+<script src="datos.js"></script>
+<script>
+const MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const MC=['E','F','M','A','M','J','J','A','S','O','N','D'];
+const DOWS=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const COLORS=['#4fb3e8','#43c59e','#8fd16a','#f2a65a','#e57fa6','#9b8cf0','#f0c84a','#5fc7c9','#e88a7a','#7aa7f5','#b98fd8','#6fcf97','#d4a373','#3fc0f0'];
+const TYPES={riego:'Riego',trasplante:'Trasplante',poda:'Poda',otro:'Otro'};
+const MKCLASS={riego:'',trasplante:'sq',poda:'dia',otro:'tri'};
+const FILTERS=[['riego','Riegos'],['abono','Abono'],['trasplante','Trasplantes'],['poda','Podas'],['otro','Otros'],['prev','Previsiones']];
+const PRESETS={
+  tropical:{label:'Tropical de interior',water:[21,19,17,14,12,10,9,10,12,15,18,21],fm:[0,0,1,1,1,1,1,1,1,0,0,0],fe:21},
+  suculenta:{label:'Suculenta',water:[35,30,22,16,14,14,14,15,18,24,30,35],fm:[0,0,0,1,1,1,1,1,0,0,0,0],fe:30},
+  cactus:{label:'Cactus',water:[45,45,25,18,15,14,14,15,18,25,35,45],fm:[0,0,0,1,1,1,1,1,0,0,0,0],fe:30},
+  aromatica:{label:'Aromática',water:[10,10,8,6,5,4,4,4,5,7,9,10],fm:[0,0,0,1,1,1,1,1,1,0,0,0],fe:21},
+  esqueje:{label:'Esqueje enraizando',water:[5,5,4,3,3,2,2,2,3,4,5,5],fm:[0,0,0,0,0,0,0,0,0,0,0,0],fe:30}
+};
+const TIPS=[
+ 'Frío y nieblas. Riega poco, por la mañana y con agua a temperatura ambiente. Aparta las plantas del cristal por la noche.',
+ 'Sigue el reposo. La calefacción reseca el aire y el sustrato: comprueba con el dedo antes de regar.',
+ 'Arranca la temporada. Primeros abonados a mitad de dosis y buen momento para trasplantar.',
+ 'Crecimiento activo. Buen mes para trasplantes, podas y dividir matas.',
+ 'Los riegos se acercan. Aclimata poco a poco al sol más fuerte tras el cristal.',
+ 'Calor y aire seco. Revisa el sustrato más a menudo y riega a primera hora.',
+ 'Pleno verano, humedad muy baja. Agrupa las plantas y evita el sol de mediodía tras el cristal.',
+ 'Calor máximo. Las suculentas están en reposo: nunca las encharques.',
+ 'Septiembre aún veraniego. Últimos abonados del año.',
+ 'Bajan las temperaturas y sube la humedad. Espacia los riegos y deja de abonar.',
+ 'Frío y días cortos. Riegos mínimos; suculentas y cactus casi en seco.',
+ 'Reposo invernal. Ojo con los radiadores y con el cristal frío de noche.'
+];
+
+// ---------- dates ----------
+const pad=n=>String(n).padStart(2,'0');
+const todayS=()=>{const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
+const dn=s=>{const[y,m,d]=s.split('-').map(Number);return Math.round(Date.UTC(y,m-1,d)/864e5)};
+const ds=n=>new Date(n*864e5).toISOString().slice(0,10);
+const mo=s=>+s.slice(5,7)-1;
+const short=s=>s.slice(8,10)+'/'+s.slice(5,7);
+const longDate=s=>{const d=new Date(dn(s)*864e5);const w=DOWS[d.getUTCDay()];return w[0].toUpperCase()+w.slice(1)+' '+d.getUTCDate()+' de '+MES[d.getUTCMonth()]};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dias=n=>n===1?'1 día':n+' días';
+
+// ---------- state ----------
+const S={plants:{},events:{},mode:'loading',tab:'hoy',sel:todayS(),hidP:new Set(),hidT:new Set(['prev-off'])};
+{const t=todayS();S.y=+t.slice(0,4);S.m=mo(t)}
+function lsGet(k,def){try{const v=localStorage.getItem(k);return v?JSON.parse(v):def}catch(e){return def}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+S.hidP=new Set(lsGet('rc-hidP',[]));S.hidT=new Set(lsGet('rc-hidT',[]));S.tab=lsGet('rc-tab','hoy');
+const saveFilters=()=>{lsSet('rc-hidP',[...S.hidP]);lsSet('rc-hidT',[...S.hidT])};
+
+// ---------- storage ----------
+// Dos modos:
+//  · 'github': los datos viven en riegos.json dentro de tu repositorio de GitHub. Se leen con la API pública
+//    y se guardan con una clave personal (fine-grained token) que solo existe en tus navegadores.
+//    Sin clave, la página es de solo lectura. Se activa sola en <usuario>.github.io/<repo>/ o configurándolo en Ajustes.
+//  · 'local': abriendo index.html desde el disco, como antes: arranca con datos.js y guarda en este navegador.
+let db=null;
+const newId=()=>'l'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const store={
+  async addEvent(d){canWrite();const id=newId();const m=()=>{S.events[id]={...d,id}};m();commit(m,`${TYPES[d.type]}: ${S.plants[d.plant]?.name||d.plant} (${d.date})`);return id},
+  async setEvent(id,d){canWrite();const m=()=>{S.events[id]={...d,id}};m();commit(m,`Editar registro: ${S.plants[d.plant]?.name||d.plant}`)},
+  async delEvent(id){canWrite();const n=S.plants[S.events[id]?.plant]?.name||'';const m=()=>{delete S.events[id]};m();commit(m,`Borrar registro ${n}`)},
+  async setPlant(id,d){canWrite();const m=()=>{S.plants[id]={...d,id}};m();commit(m,`Planta: ${d.name}`)},
+  async delPlant(id){canWrite();const n=S.plants[id]?.name||id;const m=()=>{delete S.plants[id]};m();commit(m,`Eliminar planta ${n}`)}
+};
+function canWrite(){if(S.mode==='github'&&!gh.token)throw{code:'readonly'};if(S.mode==='error')throw{code:'offline'}}
+function commit(m,msg){if(S.mode==='github'){ghQueue(m,msg);render()}else localSave()}
+const strip=o=>Object.fromEntries(Object.entries(o).map(([k,v])=>{const{id,...r}=v;return[k,r]}));
+const nowLocal=()=>{const d=new Date();return todayS()+'T'+pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds())};
+function serialize(source){return{exported:nowLocal(),source,plants:strip(S.plants),events:strip(S.events),settings:{ui:{bg:S.bg}}}}
+function seed(D){D=D||{plants:{},events:{}};const pl={},ev={};
+  for(const[k,v]of Object.entries(D.plants||{}))pl[k]={...v,id:k};
+  for(const[k,v]of Object.entries(D.events||{}))ev[k]={...v,id:k};
+  return{plants:pl,events:ev,stamp:D.exported||''}}
+function loadData(D){const s=seed(D);S.plants=s.plants;S.events=s.events;S.stamp=s.stamp}
+function downloadCopy(){const out=serialize(S.mode==='github'?'copia desde la web (GitHub)':'web local (riegos/web/index.html)');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(out,null,1)],{type:'application/json'}));
+  a.download='riegos-'+todayS()+'.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
+
+// ----- modo local (archivo abierto desde el disco) -----
+const LOCAL_KEY='rc-local-v1';
+const seedFromFile=()=>seed(window.RIEGOS_DATA);
+function localSave(){lsSet(LOCAL_KEY,{plants:S.plants,events:S.events,stamp:S.stamp});render()}
+function resetFromFile(){loadData(window.RIEGOS_DATA);localSave();showBanner()}
+
+// ----- modo GitHub -----
+const GH_TOKEN_KEY='rc-gh-token',GH_CFG_KEY='rc-gh-cfg';
+const gh={cfg:null,token:'',sha:null,state:'ok',err:''};
+function ghCfg(){
+  const c=lsGet(GH_CFG_KEY,null);
+  if(c&&c.owner&&c.repo)return{branch:'main',path:'riegos.json',...c};
+  return ghAuto();
+}
+function ghAuto(){
+  const h=location.hostname;
+  if(h.endsWith('.github.io')){const owner=h.split('.')[0];const seg=location.pathname.split('/').filter(Boolean)[0];
+    return{owner,repo:seg&&!seg.includes('.')?seg:h,branch:'main',path:'riegos.json',auto:true}}
+  return null;
+}
+const b64e=s=>{const b=new TextEncoder().encode(s);let bin='';for(let i=0;i<b.length;i+=0x8000)bin+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(bin)};
+const b64d=s=>new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g,'')),c=>c.charCodeAt(0)));
+const ghURL=c=>`https://api.github.com/repos/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}/contents/${c.path.split('/').map(encodeURIComponent).join('/')}`;
+const ghHeaders=tok=>{const h={Accept:'application/vnd.github+json'};if(tok)h.Authorization='Bearer '+tok;return h};
+function ghErr(status,reading){
+  if(status===401)return'La clave no es válida o ha caducado. Cámbiala en Ajustes.';
+  if(status===403)return reading?'GitHub ha limitado las lecturas un rato (demasiadas sin clave). Prueba en unos minutos.':'La clave no tiene permiso de escritura en este repositorio (revisa "Contents: Read and write").';
+  if(status===404)return reading?`No encuentro ${gh.cfg.path} en ${gh.cfg.owner}/${gh.cfg.repo} (rama ${gh.cfg.branch}). Si el repositorio es privado, añade tu clave en Ajustes.`:'La clave no da acceso a este repositorio.';
+  return'GitHub ha respondido con un error ('+status+'). Revisa la conexión y vuelve a intentarlo.';
+}
+async function ghRead(cfg=gh.cfg,tok=gh.token){
+  const r=await fetch(ghURL(cfg)+'?ref='+encodeURIComponent(cfg.branch)+'&_='+Date.now(),{headers:ghHeaders(tok),cache:'no-store'});
+  if(!r.ok)throw new Error(ghErr(r.status,true));
+  const j=await r.json();
+  const txt=j.content&&j.encoding==='base64'?b64d(j.content):await (await fetch(j.download_url,{cache:'no-store'})).text();
+  return{data:JSON.parse(txt),sha:j.sha};
+}
+// Los cambios se agrupan (0,4 s) y se guardan en un único commit. Si alguien (el móvil, Claude) guardó
+// entre medias, GitHub rechaza el commit: se releen los datos, se vuelven a aplicar los cambios y se reintenta.
+let pending=[],flushT=null,flushing=null;
+function ghQueue(m,msg){pending.push({m,msg});clearTimeout(flushT);flushT=setTimeout(ghFlush,400);setSync('saving')}
+async function ghFlush(){
+  if(flushing)return;
+  if(!pending.length){setSync('ok');return}
+  const batch=pending;pending=[];
+  flushing=(async()=>{
+    for(let attempt=0;attempt<4;attempt++){
+      try{
+        const body={message:batch.length===1?batch[0].msg:`${batch.length} cambios desde la web`,content:b64e(JSON.stringify(serialize('Riegos de casa (web en GitHub)'),null,1)),sha:gh.sha,branch:gh.cfg.branch};
+        const r=await fetch(ghURL(gh.cfg),{method:'PUT',headers:{...ghHeaders(gh.token),'Content-Type':'application/json'},body:JSON.stringify(body)});
+        if(r.ok){gh.sha=(await r.json()).content.sha;return true}
+        if((r.status===409||r.status===422)&&attempt<3){const{data,sha}=await ghRead();gh.sha=sha;loadData(data);for(const b of batch.concat(pending))b.m();render();continue}
+        throw new Error(ghErr(r.status,false));
+      }catch(e){
+        if(attempt>=3||/clave|permiso|acceso/.test(e.message)){pending=batch.concat(pending);setSync('error',e.message);return false}
+        await new Promise(r=>setTimeout(r,800*(attempt+1)));
+      }
+    }
+  })();
+  const ok=await flushing;flushing=null;
+  if(ok){if(pending.length)ghFlush();else setSync('ok')}
+}
+function setSync(state,msg){gh.state=state;gh.err=msg||'';showBanner()}
+// Recarga los datos al volver a la pestaña (por si registraste desde el móvil o lo hizo Claude).
+document.addEventListener('visibilitychange',async()=>{
+  if(document.visibilityState!=='visible'||S.mode!=='github'||pending.length||flushing||modal.innerHTML)return;
+  try{const{data,sha}=await ghRead();if(sha!==gh.sha){gh.sha=sha;loadData(data);render()}}catch(e){}
+});
+window.addEventListener('beforeunload',e=>{if(pending.length||flushing){e.preventDefault();e.returnValue=''}});
+
+function showBanner(){const b=document.getElementById('banner');b.hidden=false;
+  if(S.mode==='github'){
+    const repo=`${esc(gh.cfg.owner)}/${esc(gh.cfg.repo)}`;
+    if(!gh.token){b.innerHTML=`<b>Modo lectura.</b> Estás viendo los datos de ${repo}. Para registrar riegos, añade tu clave de GitHub. <button class="btn" type="button" id="gh-key">Añadir clave</button>`;b.querySelector('#gh-key').onclick=settingsSheet;return}
+    const st=gh.state==='saving'?'Guardando en GitHub…':gh.state==='error'?`<span style="color:var(--late)">No se ha podido guardar: ${esc(gh.err)}</span>`:'Todo guardado en GitHub.';
+    b.innerHTML=`<span role="status"><b>${repo}</b> · ${st}</span>${gh.state==='error'?' <button class="btn" type="button" id="gh-retry">Reintentar</button>':''}`;
+    const rb=b.querySelector('#gh-retry');if(rb)rb.onclick=()=>{setSync('saving');ghFlush()};
+    return}
+  if(S.mode==='error'){b.innerHTML=`<span style="color:var(--late)"><b>No se han podido cargar los datos.</b> ${esc(gh.err)}</span> <button class="btn" type="button" id="gh-reload">Reintentar</button> <button class="btn" type="button" id="gh-set">Ajustes</button>`;
+    b.querySelector('#gh-reload').onclick=()=>location.reload();b.querySelector('#gh-set').onclick=settingsSheet;return}
+  const D=window.RIEGOS_DATA;const fileStamp=D&&D.exported?short(D.exported)+'/'+D.exported.slice(0,4):'?';
+  b.innerHTML=`<b>Versión local.</b> Datos de <code>datos.js</code> (${fileStamp}); lo que registres se guarda solo en este navegador. `+
+   `<button class="btn" type="button" id="lc-dl">Descargar copia JSON</button> <button class="btn" type="button" id="lc-reset">Volver a datos.js</button>`;
+  b.querySelector('#lc-dl').onclick=downloadCopy;
+  b.querySelector('#lc-reset').onclick=()=>{if(confirm('¿Descartar los cambios de este navegador y cargar de nuevo datos.js?'))resetFromFile()}}
+async function boot(){
+  render();
+  gh.cfg=ghCfg();gh.token=lsGet(GH_TOKEN_KEY,'')||'';
+  let D=null;
+  if(gh.cfg){
+    try{const r=await ghRead();gh.sha=r.sha;D=r.data;loadData(D);S.mode='github'}
+    catch(e){S.mode='error';gh.err=e.message}
+  }else{
+    D=window.RIEGOS_DATA;
+    const saved=lsGet(LOCAL_KEY,null);
+    // Si datos.js es más nuevo que lo guardado en el navegador, manda datos.js.
+    if(saved&&saved.plants&&(!D||!D.exported||(saved.stamp||'')>=D.exported)){S.plants=saved.plants;S.events=saved.events;S.stamp=saved.stamp}
+    else{loadData(D);lsSet(LOCAL_KEY,{plants:S.plants,events:S.events,stamp:S.stamp})}
+    S.mode='local';
+  }
+  if(D&&D.settings&&D.settings.ui&&D.settings.ui.bg&&BGS[D.settings.ui.bg]&&!localStorage.getItem('rc-bg'))applyBg(D.settings.ui.bg);
+  document.documentElement.classList.toggle('ro',S.mode!=='local'&&!(S.mode==='github'&&gh.token));
+  // Enlaces directos: ?tab=plantas | ?ficha=<id de planta>
+  const q=new URLSearchParams(location.search);if(q.has('shot'))document.documentElement.classList.add('noanim');if(['hoy','cal','plantas'].includes(q.get('tab')))S.tab=q.get('tab');
+  showBanner();render();
+  if(q.get('ficha')&&S.plants[q.get('ficha')])plantSheet(q.get('ficha'));
+}
+
+// ---------- derived ----------
+function plantList(all){return Object.values(S.plants).filter(p=>all||!p.archived).sort((a,b)=>(a.order??99)-(b.order??99)||a.name.localeCompare(b.name))}
+function evsOf(pid){return Object.values(S.events).filter(e=>e.plant===pid).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0)}
+function waterFor(p,m){const w=p.water&&p.water[m];return Math.max(1,+w||14)}
+// Reposo: meses marcados en p.rest (0/1) en los que la planta va en seco (p. ej. mammillaria nov-feb).
+const isRest=(p,m)=>!!(p.rest&&p.rest[m]);
+function restEndMonth(p,m){for(let i=1;i<=12;i++){const k=(m+i)%12;if(!isRest(p,k))return k}return null}
+// Si el día n cae en un mes de reposo, lo pasa al día 1 del primer mes sin reposo.
+function skipRest(p,n){let d=new Date(n*864e5),g=0;while(isRest(p,d.getUTCMonth())&&g++<12)d=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,1));return Math.round(d.getTime()/864e5)}
+function fertNextFrom(p,c,t){
+  const fm=p.fertMonths||[];if(!fm.some(Boolean))return null;
+  if(c<t)c=t;
+  let d=new Date(c*864e5);
+  for(let i=0;i<14;i++){if(fm[d.getUTCMonth()])return Math.round(d.getTime()/864e5);d=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,1))}
+  return null;
+}
+function stats(p){
+  const t=dn(todayS()),ts=todayS();
+  const all=evsOf(p.id);
+  const done=all.filter(e=>!e.planned&&e.date<=ts);
+  const riegos=done.filter(e=>e.type==='riego');
+  const last=riegos.length?riegos[riegos.length-1].date:null;
+  const base=last||p.acquired||ts;
+  // Intervalo: el mayor entre el del mes del último riego y el del mes actual
+  // (al entrar en invierno los riegos se espacian aunque el último fuera en otoño).
+  const interval=Math.max(waterFor(p,mo(base)),waterFor(p,mo(ts)));
+  const next=skipRest(p,dn(base)+interval);
+  const due=next-t;
+  const rest=isRest(p,mo(ts));const restEnd=rest?restEndMonth(p,mo(ts)):null;
+  const ferts=riegos.filter(e=>e.fert);
+  const lastF=ferts.length?ferts[ferts.length-1].date:null;
+  const fRaw=lastF?dn(lastF)+(+p.fertEvery||30):t;
+  const fNext=fertNextFrom(p,fRaw,t);
+  const manual=riegos.filter(e=>!e.auto);
+  const gaps=[];for(let i=Math.max(1,manual.length-6);i<manual.length;i++)gaps.push(dn(manual[i].date)-dn(manual[i-1].date));
+  const avg=gaps.length?Math.round(gaps.reduce((a,b)=>a+b,0)/gaps.length):null;
+  const planned=all.filter(e=>e.planned);
+  return{last,base,interval,next,due,rest,restEnd,lastF,fNext,avg,planned,count:riegos.length,sinceLast:last?t-dn(last):null};
+}
+function statusOf(st){
+  if(st.rest)return{cls:'rest',label:`En reposo · sin riego hasta ${MES[st.restEnd]}`,short:'en reposo',icon:'moon'};
+  if(st.due<0)return{cls:'late',label:`Atrasada ${dias(-st.due)}`,short:`atrasada ${dias(-st.due)}`,icon:'alert'};
+  if(st.due===0)return{cls:'now',label:'Toca hoy',short:'hoy',icon:'drop'};
+  if(st.due<=3)return{cls:'soon',label:st.due===1?'Mañana':`En ${dias(st.due)}`,short:st.due===1?'mañana':`en ${dias(st.due)}`,icon:'clock'};
+  return{cls:'later',label:`En ${dias(st.due)}`,short:short(ds(st.next)),icon:'clock'};
+}
+const pill=(s,txt)=>`<span class="when ${s.cls}">${ICON[s.icon]}${esc(txt||s.label)}</span>`;
+function projections(p,st,from,to){
+  const out=[];const t=dn(todayS());
+  let n=skipRest(p,Math.max(st.next,t)),guard=0;
+  while(n<=to&&guard++<200){if(n>=from)out.push({date:ds(n),kind:'riego'});n=skipRest(p,n+waterFor(p,mo(ds(n))))}
+  if(st.fNext!=null){let f=st.fNext;guard=0;
+    while(f!=null&&f<=to&&guard++<40){if(f>=from)out.push({date:ds(f),kind:'abono'});f=fertNextFrom(p,f+(+p.fertEvery||30),f+1)}}
+  return out;
+}
+const visibleP=p=>!S.hidP.has(p.id);
+const showT=k=>!S.hidT.has(k);
+function eventVisible(e){
+  if(e.type==='riego')return showT('riego')||(e.fert&&showT('abono'));
+  return showT(e.type);
+}
+
+// ---------- render ----------
+const CK='<svg class="ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const ICON={
+ drop:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3c3.5 4.2 6 7.4 6 10.5A6 6 0 0 1 6 13.5C6 10.4 8.5 7.2 12 3z"/></svg>',
+ left:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>',
+ right:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg>',
+ alert:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/></svg>',
+ clock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+ moon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>',
+ pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"/><circle cx="12" cy="10" r="2"/></svg>',
+ pot:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9h14l-1.5 11h-11z"/><path d="M4 9h16"/><path d="M12 9V5m0 0c0-2 2-3 4-3 0 2-2 3-4 3zm0 0c0-2-2-3-4-3 0 2 2 3 4 3z"/></svg>',
+ scale:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 10a4 4 0 0 1 8 0z"/><path d="M12 10l1.5-2"/></svg>',
+ dots:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>'
+};
+function render(){
+  document.querySelectorAll('nav.tabs button').forEach((b,i)=>{const on=b.dataset.tab===S.tab;b.setAttribute('aria-selected',on);if(on)document.querySelector('nav.tabs .ind').style.transform=`translateX(${i*100}%)`});
+  renderFilters();renderSide();
+  const v=document.getElementById('view');
+  if(S.mode==='loading'){v.innerHTML='<p class="empty">Cargando tus plantas…</p>';return}
+  if(S.mode==='error'){v.innerHTML=`<div class="empty">No se han podido cargar los datos de GitHub.<br>${esc(gh.err)}<br><br><button class="btn primary" onclick="location.reload()">Reintentar</button></div>`;return}
+  if(!plantList(true).length){v.innerHTML='<div class="empty">Aún no hay plantas. Añade la primera desde la pestaña Plantas.<br><br><button class="btn primary" data-act="newplant">Añadir planta</button></div>';return}
+  if(S.tab==='hoy')renderHoy(v);else if(S.tab==='cal')renderCal(v);else renderPlantas(v);
+}
+function renderFilters(){
+  const f=document.getElementById('filters');const ps=plantList();
+  if(!ps.length||S.tab==='plantas'){f.hidden=true;return}f.hidden=false;
+  const open=lsGet('rc-fopen',window.innerWidth>960);
+  const hidden=ps.filter(p=>!visibleP(p)).length;
+  f.innerHTML=`<details class="fwrap" ${open?'open':''}><summary class="fhead"><span>Mostrar ${hidden?`· ${hidden} ocultas`:'· todas'}</span></summary>
+   <div style="display:grid;gap:8px;margin-top:8px">
+   <div class="frow"><span class="flabel">Plantas</span>${ps.map(p=>`<button class="chip" style="--c:${p.color}" aria-pressed="${visibleP(p)}" data-tp="${p.id}"><span class="dot"></span>${esc(p.name)}</button>`).join('')}
+   <button class="linkbtn" data-act="allp">Todas</button><button class="linkbtn" data-act="nonep">Ninguna</button></div>
+   ${S.tab==='cal'?`<div class="frow"><span class="flabel">Eventos</span>${FILTERS.map(([k,l])=>`<button class="chip" aria-pressed="${showT(k)}" data-tt="${k}" style="--c:var(--${k==='abono'?'leaf':'aqua'})"><span class="dot"></span>${l}</button>`).join('')}</div>`:''}
+   </div></details>`;
+  f.querySelector('details').addEventListener('toggle',e=>lsSet('rc-fopen',e.target.open));
+}
+function renderHoy(v){
+  const ts=todayS(),t=dn(ts);
+  const groups={late:[],now:[],soon:[],later:[],rest:[]};
+  const ps=plantList();const vis=ps.filter(visibleP);
+  for(const p of vis){
+    const st=stats(p);const s=statusOf(st);const cls=s.cls;
+    const lastTxt=st.last?`Último riego ${st.sinceLast===0?'hoy':'hace '+dias(st.sinceLast)} (${short(st.last)})`:`Sin riegos registrados · estimado desde su llegada (${short(st.base)})`;
+    const sub=st.rest?`${lastTxt} · va en seco este mes`:`${lastTxt} · ahora cada ~${st.interval} días`;
+    groups[cls].push({p,sort:st.due,html:row(p,cls,pill(s),sub,!st.rest)});
+    if(st.fNext!=null&&st.fNext-t<=3&&showT('abono')){
+      const fd=st.fNext-t;const fc=fd<=0?'now':'soon';
+      groups[fc].push({p,sort:fd+.5,html:row(p,fc,pill({cls:fc,icon:fc==='now'?'drop':'clock'},'Abono · '+(fd<=0?'toca abonar':`en ${dias(fd)}`)),st.lastF?`Último abono el ${short(st.lastF)} · cada ~${p.fertEvery} días en temporada`:'Sin abonos registrados · temporada de abonado',false,'fert')});
+    }
+    for(const e of st.planned){const d=dn(e.date)-t;if(d<=7){const c=d<0?'late':d===0?'now':'soon';
+      groups[c].push({p,sort:d+.7,html:row(p,c,pill({cls:c,icon:c==='late'?'alert':'clock'},`${TYPES[e.type]} programado · ${d<0?'pendiente desde '+short(e.date):d===0?'hoy':'el '+short(e.date)}`),esc(e.note||''),false,'plan',e.id)})}}
+  }
+  for(const k in groups)groups[k].sort((a,b)=>a.sort-b.sort);
+  const n=k=>groups[k].length;
+  const hid=ps.length-vis.length;
+  v.innerHTML=`<div class="today-head"><div><h2>Hoy</h2><div class="date">${longDate(ts)}</div></div>
+   <div class="summary">${n('late')?`<span class="pill late">${n('late')} atrasadas</span>`:''}<span class="pill now">${n('now')} para hoy</span><span class="pill soon">${n('soon')} en 1-3 días</span></div></div>
+   <div class="tip"><span aria-hidden="true">${ICON.drop.replace('<svg','<svg width="18" height="18" style="color:var(--ink-2);flex:none;margin-top:2px"')}</span><div><b>${MES[mo(ts)][0].toUpperCase()+MES[mo(ts)].slice(1)} en Leganés.</b> ${TIPS[mo(ts)]}</div></div>
+   ${sec('Atrasadas',groups.late,null,'Fechas estimadas: comprueba el sustrato (dedo, palillo o peso) antes de regar.')}${sec('Toca hoy',groups.now,'Nada pendiente para hoy.')}${sec('Próximos días',groups.soon)}${sec('Más adelante',groups.later)}${sec('En reposo',groups.rest,null,'Van en seco estos meses: no regar aunque pase mucho tiempo.')}
+   ${hid?`<p class="hint" style="margin-top:12px">${hid} planta${hid>1?'s':''} oculta${hid>1?'s':''} por el filtro.</p>`:''}`;
+}
+function sec(title,items,emptyMsg,hint){if(!items.length)return emptyMsg?`<section class="group"><h3>${title}</h3><div class="empty">${emptyMsg}</div></section>`:'';return`<section class="group"><h3>${title}<span class="cnt">${items.length}</span></h3>${hint?`<p class="ghint">${hint}</p>`:''}<ul class="rows">${items.map(i=>i.html).join('')}</ul></section>`}
+function row(p,cls,when,sub,quick,kind,evId){
+  let acts='';const nm=esc(p.name);
+  if(kind==='fert')acts=`<button class="btn green" data-act="quickfert" data-p="${p.id}">Regada con abono<span class="sr"> · ${nm}</span></button>`;
+  else if(kind==='plan')acts=`<button class="btn" data-act="plandone" data-e="${evId}">Hecho<span class="sr"> · ${nm}</span></button>`;
+  else if(quick===false)acts=`<button class="btn more" data-act="plant" data-p="${p.id}" aria-label="Ver ficha de ${nm}">${ICON.dots}</button>`;
+  else acts=`<button class="btn primary" data-act="quick" data-p="${p.id}">${ICON.drop}Regada hoy<span class="sr"> · ${nm}</span></button><button class="btn more" data-act="log" data-p="${p.id}" aria-label="Registrar con detalles: ${nm}">${ICON.dots}</button>`;
+  return`<li class="row ${cls}" style="--c:${p.color}"><span class="bar" aria-hidden="true"></span><div class="main"><div class="name"><button class="linkname" data-act="plant" data-p="${p.id}">${nm}</button> ${when}</div><div class="sub">${sub}</div></div><div class="acts">${acts}</div></li>`;
+}
+function renderCal(v){
+  const first=Date.UTC(S.y,S.m,1)/864e5;const wd=(new Date(first*864e5).getUTCDay()+6)%7;
+  const start=first-wd,end=start+41;const ts=todayS();
+  const map={};const add=(d,it)=>{(map[d]=map[d]||[]).push(it)};
+  const ps=plantList().filter(visibleP);
+  for(const p of ps){
+    for(const e of evsOf(p.id)){const n=dn(e.date);if(n<start||n>end||!eventVisible(e))continue;add(e.date,{p,e})}
+    if(showT('prev')){const st=stats(p);for(const pr of projections(p,st,start,end)){if(pr.kind==='riego'&&!showT('riego'))continue;if(pr.kind==='abono'&&!showT('abono'))continue;add(pr.date,{p,proj:pr.kind})}}
+  }
+  let cells='';
+  for(let n=start;n<=end;n++){
+    const d=ds(n);const items=(map[d]||[]).sort((a,b)=>(a.proj?1:0)-(b.proj?1:0));
+    const out=mo(d)!==S.m;const max=4;
+    cells+=`<button class="day${out?' out':''}${d===ts?' today':''}${d===S.sel?' sel':''}" data-day="${d}" aria-label="${longDate(d)}"><span class="n">${+d.slice(8)}</span><span class="evs">${items.slice(0,max).map(evChip).join('')}${items.length>max?`<span class="more">+${items.length-max}</span>`:''}</span></button>`;
+  }
+  v.innerHTML=`<div class="calhead"><button class="btn" data-act="prevm" aria-label="Mes anterior">${ICON.left}</button><h2>${MES[S.m]} ${S.y}</h2><button class="btn" data-act="nextm" aria-label="Mes siguiente">${ICON.right}</button></div>
+   <div class="cal">${['L','M','X','J','V','S','D'].map(d=>`<div class="dow">${d}</div>`).join('')}${cells}</div>
+   <div class="legend"><span><i class="mk"></i>Riego</span><span><i class="mk fert"></i>Riego con abono</span><span><i class="mk sq"></i>Trasplante</span><span><i class="mk dia"></i>Poda</span><span><i class="mk tri"></i>Otro</span><span><i class="mk proj"></i>Riego previsto</span><span><i class="mk proj fertp"></i>Abono previsto</span></div>
+   <div class="dayp" id="dayp">${dayPanel(S.sel,map[S.sel]||[])}</div>`;
+}
+function evChip(it){
+  const c=it.p.color;
+  if(it.proj)return`<span class="ev proj" style="--c:${c}"><i class="mk proj ${it.proj==='abono'?'fertp':''}"></i><b>${esc(it.p.name)}</b></span>`;
+  const e=it.e;const k=(MKCLASS[e.type]||'')+(e.type==='riego'&&e.fert?' fert':'')+(e.planned?' proj':'');
+  return`<span class="ev${e.planned?' planned':''}" style="--c:${c}"><i class="mk ${k}"></i><b>${esc(it.p.name)}</b></span>`;
+}
+function dayPanel(d,items){
+  const real=items.filter(i=>!i.proj),proj=items.filter(i=>i.proj);
+  let h=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><h3>${longDate(d)}</h3><button class="btn primary" data-act="logday" data-d="${d}">${ICON.drop}Añadir en este día</button></div>`;
+  if(!items.length)h+=`<p class="hint">Sin registros este día.</p>`;
+  h+=real.map(({p,e})=>`<div class="dline" style="--c:${p.color}"><i class="mk ${(MKCLASS[e.type]||'')+(e.type==='riego'&&e.fert?' fert':'')+(e.planned?' proj':'')}"></i><div class="txt"><div><b>${esc(p.name)}</b> · ${TYPES[e.type]}${e.fert?'<span class="tag">abono</span>':''}${e.auto?'<span class="tag blue">automático</span>':''}${e.planned?'<span class="tag grey">programado</span>':''}</div>${e.note?`<div class="note">${esc(e.note)}</div>`:''}</div><button class="btn" data-act="editev" data-e="${e.id}">Editar</button></div>`).join('');
+  h+=proj.map(({p,proj})=>`<div class="dline" style="--c:${p.color}"><i class="mk proj ${proj==='abono'?'fertp':''}"></i><div class="txt"><b>${esc(p.name)}</b> · <span class="meta">${proj==='abono'?'abono previsto':'riego previsto'}</span></div></div>`).join('');
+  return h;
+}
+function renderPlantas(v){
+  const ps=plantList(),arch=plantList(true).filter(p=>p.archived);
+  const card=p=>{const st=stats(p);const s=statusOf(st);
+    return`<button class="pcard" style="--c:${p.color}" data-act="plant" data-p="${p.id}"><h3><span>${esc(p.name)}</span>${pill(s,s.short)}</h3>
+    <div class="meta">${p.location?`<span>${ICON.pin}${esc(p.location)}</span>`:''}${p.pot?`<span>${ICON.pot}Maceta ${esc(p.pot)}</span>`:''}${p.weight?`<span>${ICON.scale}Seca ${esc(p.weight)}</span>`:''}</div>
+    <dl class="kv">${plantKV(p,st,false)}</dl>
+    ${p.notes?`<p class="notes">${esc(p.notes)}</p>`:''}</button>`};
+  v.innerHTML=`<div class="calhead"><h2>Plantas</h2><button class="btn primary" data-act="newplant">+ Nueva planta</button></div>
+   <div class="pgrid">${ps.map(card).join('')}</div>
+   ${arch.length?`<div class="group"><h3>Archivadas</h3><div class="pgrid">${arch.map(card).join('')}</div></div>`:''}`;
+}
+
+
+const yr=s=>s.slice(0,4)!==todayS().slice(0,4)?'/'+s.slice(2,4):'';
+const monthsTxt=a=>{const on=(a||[]).map((v,i)=>v?i:-1).filter(i=>i>=0);if(!on.length)return'';
+  const runs=[];let st=on[0],pr=on[0];for(const i of on.slice(1)){if(i===pr+1){pr=i;continue}runs.push([st,pr]);st=pr=i}runs.push([st,pr]);
+  if(runs.length>1&&runs[0][0]===0&&runs[runs.length-1][1]===11){const f=runs.shift();runs[runs.length-1][1]=f[1]}  // nov-dic + ene-feb → nov-feb
+  return runs.map(([a,b])=>a===b?MES[a].slice(0,3):MES[a].slice(0,3)+'-'+MES[b].slice(0,3)).join(', ')};
+function plantKV(p,st,full){
+  const t=dn(todayS());
+  const rows=[
+   ['Último riego',st.last?short(st.last)+yr(st.last)+(st.sinceLast===0?' · hoy':' · hace '+dias(st.sinceLast)):'sin registrar'],
+   ['Próximo riego',st.rest?`en reposo hasta ${MES[st.restEnd]}`:st.due<0?`atrasada ${dias(-st.due)} (${short(ds(st.next))})`:st.due===0?'hoy':short(ds(st.next))+yr(ds(st.next))],
+   ['Último abono',st.lastF?short(st.lastF)+yr(st.lastF):'—'],
+   ['Abono',(p.fertMonths||[]).some(Boolean)?monthsTxt(p.fertMonths)+(st.fNext!=null?` · próximo ${short(ds(st.fNext))}${yr(ds(st.fNext))}`:''):'sin temporada'],
+  ];
+  if(full){
+    if(p.acquired){const m=Math.max(0,Math.round((t-dn(p.acquired))/30.4));rows.unshift(['En casa desde',short(p.acquired)+'/'+p.acquired.slice(2,4)+` · ${m<1?'menos de 1 mes':m<24?m+(m===1?' mes':' meses'):Math.floor(m/12)+' años'}`])}
+    if(p.rest&&p.rest.some(Boolean))rows.push(['Reposo (sin riego)',monthsTxt(p.rest)]);
+    if(p.weight)rows.push(['Peso seco de referencia',p.weight]);
+    rows.push(['Media real',st.avg?'cada '+st.avg+' días':'—']);
+  }
+  const nextPlan=st.planned.filter(e=>e.date>=todayS())[0]||st.planned[0];
+  if(nextPlan)rows.push(['Programado',`${TYPES[nextPlan.type]} · ${short(nextPlan.date)}${yr(nextPlan.date)}`]);
+  return rows.map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('');
+}
+
+// ---------- side blocks ----------
+function renderSide(){
+  const st=document.getElementById('stats'),tb=document.getElementById('todayb');
+  if(S.mode==='loading'||S.mode==='error'||!plantList(true).length){st.innerHTML='';tb.hidden=true;return}
+  tb.hidden=false;const t=dn(todayS()),ts=todayS();let late=0,now=0,week=0;
+  for(const p of plantList().filter(visibleP)){const s=stats(p);if(s.rest)continue;const d=s.due;if(d<0)late++;else if(d===0)now++;else if(d<=7)week++}
+  st.innerHTML=`<button class="stat late" data-act="gohoy"><b>${late}</b><small>atrasadas</small></button><button class="stat now" data-act="gohoy"><b>${now}</b><small>tocan hoy</small></button><button class="stat soon" data-act="gohoy"><b>${week}</b><small>esta semana</small></button>`;
+  const done=Object.values(S.events).filter(e=>e.date===ts&&!e.planned&&S.plants[e.plant]);
+  const planned=Object.values(S.events).filter(e=>e.planned&&S.plants[e.plant]&&!S.plants[e.plant].archived).sort((a,b)=>a.date<b.date?-1:1).slice(0,3);
+  const d=new Date(t*864e5);
+  tb.innerHTML=`<h3>Hoy <small>${d.getUTCDate()} ${MES[d.getUTCMonth()].slice(0,3)}</small></h3>
+   ${done.length?done.map(e=>`<div class="sline"><i class="mk ${MKCLASS[e.type]||''}" style="--c:${S.plants[e.plant].color}"></i>${esc(S.plants[e.plant].name)}<em>${e.type==='riego'?(e.fert?'regada con abono':'regada'):TYPES[e.type].toLowerCase()}</em></div>`).join(''):'<p class="hint">Aún no has registrado nada hoy.</p>'}
+   ${planned.length?`<h3 style="margin-top:14px">Programado</h3>${planned.map(e=>`<div class="sline"><i class="mk proj" style="--c:${S.plants[e.plant].color}"></i>${TYPES[e.type]} · ${esc(S.plants[e.plant].name)}<em class="blue">${dn(e.date)<t?'pendiente':short(e.date)+(e.date.slice(0,4)!==ts.slice(0,4)?'/'+e.date.slice(2,4):'')}</em></div>`).join('')}`:''}`;
+}
+
+// ---------- backgrounds ----------
+const BGS={
+  bosque:{name:'Bosque al anochecer',desc:'Pinos minimalistas bajo la luna'},
+  noche:{name:'Noche verde',desc:'Degradado verde y azul profundo'},
+  aurora:{name:'Aurora',desc:'Luces menta, azul y violeta que se mueven despacio'},
+  liso:{name:'Liso',desc:'Solo oscuro, sin fondo'}
+};
+function forestSVG(moon=true){
+  let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+  let stars='';for(let i=0;i<70;i++)stars+=`<circle cx="${(rnd()*1600).toFixed(0)}" cy="${(rnd()*430).toFixed(0)}" r="${(rnd()*1.6+.4).toFixed(1)}" fill="#dfe9f0" opacity="${(rnd()*.5+.15).toFixed(2)}"/>`;
+  const layer=(b,h0,h1,gap,fill)=>{let g='';for(let x=-40;x<1660;x+=gap*(.7+rnd()*.6)){const h=h0+rnd()*(h1-h0),w=h*.42;
+    const P=[[0,-h],[-.35,-.62],[-.18,-.62],[-.45,-.3],[-.25,-.3],[-.5,0],[.5,0],[.25,-.3],[.45,-.3],[.18,-.62],[.35,-.62]].map(([a,c],i)=>i===0?`${x.toFixed(0)},${(b+c).toFixed(0)}`:`${(x+a*w).toFixed(0)},${(b+c*h).toFixed(0)}`).join(' ');
+    g+=`<polygon points="${P}"/>`}
+    return `<g fill="${fill}">${g}<rect x="0" y="${b}" width="1600" height="${1000-b}"/></g>`};
+  return `<svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">
+  <defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#091726"/><stop offset=".55" stop-color="#0f2c38"/><stop offset="1" stop-color="#1b4842"/></linearGradient>
+  <radialGradient id="glow"><stop offset="0" stop-color="#cfe6d8" stop-opacity=".35"/><stop offset="1" stop-color="#cfe6d8" stop-opacity="0"/></radialGradient>
+  <linearGradient id="mist" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2c5d58" stop-opacity="0"/><stop offset=".5" stop-color="#2c5d58" stop-opacity=".35"/><stop offset="1" stop-color="#2c5d58" stop-opacity="0"/></linearGradient></defs>
+  <rect width="1600" height="1000" fill="url(#sky)"/>${stars}
+  ${moon?'<circle cx="1330" cy="330" r="120" fill="url(#glow)" opacity=".7"/><circle cx="1330" cy="330" r="34" fill="#e8efe3" opacity=".6"/>':''}
+  <path d="M0 640 L170 530 L330 600 L520 470 L700 585 L880 495 L1060 600 L1250 470 L1420 570 L1600 515 L1600 1000 L0 1000Z" fill="#14343c" opacity=".85"/>
+  <rect y="560" width="1600" height="160" fill="url(#mist)"/>
+  ${layer(720,90,150,38,'#10292c')}${layer(835,130,210,52,'#0b1d20')}${layer(1000,210,330,78,'#050f11')}</svg>`;
+}
+const AURORA='<div class="blob" style="left:-12%;top:-18%;width:58%;height:70%;background:#1fb88a"></div><div class="blob" style="right:-14%;top:12%;width:52%;height:62%;background:#3c6cf0"></div><div class="blob" style="left:22%;bottom:-30%;width:60%;height:62%;background:#7a4fd6"></div>';
+// En el fondo de la página la luna va aparte (div .moon) para colocarla en el margen derecho, fuera de los bloques;
+// en las miniaturas de Ajustes sigue dentro del dibujo.
+function bgInner(k,main){return k==='bosque'?(main?forestSVG(false)+'<div class="moon"></div>':forestSVG()):k==='aurora'?AURORA:''}
+S.bg=lsGet('rc-bg','bosque');if(!BGS[S.bg])S.bg='bosque';
+function applyBg(k){S.bg=k;document.documentElement.dataset.bg=k;document.getElementById('bg').innerHTML=bgInner(k,true);lsSet('rc-bg',k)}
+applyBg(S.bg);
+async function saveBg(k){applyBg(k);if(db){try{await db.doc('settings/ui').set({bg:k})}catch(e){}}}
+function settingsSheet(){
+  const c=gh.cfg||ghCfg()||{owner:'',repo:'',branch:'main',path:'riegos.json'};
+  const auto=c.auto&&!lsGet(GH_CFG_KEY,null);
+  openSheet(`<h2>Ajustes</h2><div class="field"><span class="flab">Fondo de la página</span><div class="bgopts">${Object.entries(BGS).map(([k,v])=>`<button type="button" class="bgopt" data-bgk="${k}" aria-pressed="${S.bg===k}"><div class="pv pv-${k}">${bgInner(k)}</div><div><b>${v.name}</b><small>${v.desc}</small></div></button>`).join('')}</div>
+   <span class="hint">Se guarda en este navegador.</span></div>
+   <div class="field"><span class="flab">Datos en GitHub</span><div class="ghbox">
+     <p class="hint" style="margin:0">${S.mode==='github'?`Conectada a <b>${esc(c.owner)}/${esc(c.repo)}</b> (${esc(c.path)}, rama ${esc(c.branch)}).`:S.mode==='local'?'Ahora estás en la versión local (datos.js). Rellena el repositorio para usar los datos de GitHub también desde aquí.':'No se han podido cargar los datos: revisa el repositorio y la clave.'}${auto?' Detectado automáticamente por la dirección de la página.':''}</p>
+     <div class="row2"><label class="field" style="margin:0"><span class="flab">Usuario</span><input type="text" id="gh-o" value="${esc(c.owner)}" autocomplete="off" spellcheck="false"></label>
+       <label class="field" style="margin:0"><span class="flab">Repositorio</span><input type="text" id="gh-r" value="${esc(c.repo)}" autocomplete="off" spellcheck="false"></label>
+       <label class="field" style="margin:0"><span class="flab">Rama</span><input type="text" id="gh-b" value="${esc(c.branch)}" autocomplete="off" spellcheck="false"></label>
+       <label class="field" style="margin:0"><span class="flab">Archivo</span><input type="text" id="gh-p" value="${esc(c.path)}" autocomplete="off" spellcheck="false"></label></div>
+     <label class="field" style="margin:0"><span class="flab">Clave personal (token)</span><input type="password" id="gh-t" value="" autocomplete="off" placeholder="${gh.token?'Clave guardada en este navegador (escribe otra para cambiarla)':'github_pat_…'}"></label>
+     <span class="hint">La clave se guarda solo en este navegador y solo se envía a GitHub. Sin clave, la página es de solo lectura.</span>
+     <div id="gh-msg" role="status" class="hint"></div>
+     <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn primary" data-ghsave>Guardar y comprobar</button>${gh.token?'<button type="button" class="btn danger" data-ghforget>Olvidar clave</button>':''}${lsGet(GH_CFG_KEY,null)?'<button type="button" class="btn" data-ghlocal>Quitar repositorio</button>':''}</div>
+   </div></div>
+   <div class="field"><span class="flab">Copia de seguridad</span><div><button type="button" class="btn" data-dl>Descargar copia JSON</button></div></div>
+   <div class="foot"><div class="r"><button class="btn primary" data-x>Listo</button></div></div>`,sh=>{
+    const msg=t=>sh.querySelector('#gh-msg').innerHTML=t;
+    sh.addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;
+      if(b.dataset.bgk){saveBg(b.dataset.bgk);sh.querySelectorAll('[data-bgk]').forEach(x=>x.setAttribute('aria-pressed',x===b))}
+      else if(b.hasAttribute('data-dl'))downloadCopy();
+      else if(b.hasAttribute('data-ghforget')){try{localStorage.removeItem(GH_TOKEN_KEY)}catch(_){}location.reload()}
+      else if(b.hasAttribute('data-ghlocal')){try{localStorage.removeItem(GH_CFG_KEY)}catch(_){}location.reload()}
+      else if(b.hasAttribute('data-ghsave')){
+        const v=id=>sh.querySelector(id).value.trim();
+        const cfg={owner:v('#gh-o'),repo:v('#gh-r'),branch:v('#gh-b')||'main',path:v('#gh-p')||'riegos.json'};
+        const tok=v('#gh-t')||gh.token;
+        if(!cfg.owner||!cfg.repo){msg('Escribe el usuario y el repositorio.');return}
+        b.disabled=true;msg('Comprobando…');
+        try{await ghRead(cfg,tok);
+          // Solo se guarda la configuración si no coincide con la detectada por la dirección.
+          const det=ghAuto();const same=det&&det.owner===cfg.owner&&det.repo===cfg.repo&&cfg.branch==='main'&&cfg.path==='riegos.json';
+          if(same){try{localStorage.removeItem(GH_CFG_KEY)}catch(_){}}else lsSet(GH_CFG_KEY,cfg);
+          if(tok)lsSet(GH_TOKEN_KEY,tok);
+          msg(tok?'Clave y repositorio correctos. Recargando…':'Repositorio correcto (sin clave: solo lectura). Recargando…');setTimeout(()=>location.reload(),900)}
+        catch(err){b.disabled=false;msg(`<span style="color:var(--late)">${esc(err.message)}</span>`)}
+      }
+      else if(b.hasAttribute('data-x'))closeSheet()})});
+}
+document.getElementById('settings').addEventListener('click',settingsSheet);
+
+// ---------- sheets ----------
+const modal=document.getElementById('modal');
+// Diálogos accesibles: foco dentro al abrir, Tab no se escapa, Esc cierra y el foco vuelve a donde estaba.
+let lastFocus=null;
+function openSheet(html,setup){if(!modal.innerHTML)lastFocus=document.activeElement;
+  modal.innerHTML=`<div class="overlay" data-close="1"><div class="sheet" role="dialog" aria-modal="true" tabindex="-1">${html}</div></div>`;
+  const sh=modal.querySelector('.sheet');const h=sh.querySelector('h2');if(h){h.id=h.id||'sheet-title';sh.setAttribute('aria-labelledby',h.id)}
+  setup&&setup(sh);sh.focus()}
+function closeSheet(){modal.innerHTML='';if(lastFocus&&document.contains(lastFocus))lastFocus.focus();lastFocus=null}
+modal.addEventListener('click',e=>{if(e.target.dataset.close)closeSheet()});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&modal.innerHTML)closeSheet();
+  if(e.key==='Tab'&&modal.innerHTML){const f=[...modal.querySelectorAll('button,input,select,textarea,summary,[href]')].filter(x=>!x.disabled&&x.offsetParent!==null);if(!f.length)return;
+    const a=f[0],z=f[f.length-1];if(e.shiftKey&&document.activeElement===a||e.shiftKey&&document.activeElement===modal.querySelector('.sheet')){e.preventDefault();z.focus()}else if(!e.shiftKey&&document.activeElement===z){e.preventDefault();a.focus()}}
+  const tab=e.target.closest&&e.target.closest('[role=tab]');
+  if(tab&&(e.key==='ArrowRight'||e.key==='ArrowLeft')){const tabs=[...document.querySelectorAll('[role=tab]')];const i=(tabs.indexOf(tab)+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;tabs[i].click();tabs[i].focus()}
+});
+
+function logSheet(opts={}){
+  const ps=plantList();
+  const st={type:opts.type||'riego',date:opts.date||todayS(),sel:new Set(opts.plants||[]),fert:{},note:{},planned:false};
+  if(opts.fert)opts.plants?.forEach(id=>st.fert[id]=true);
+  openSheet('<div id="lg"></div>',sh=>{
+    const draw=()=>{
+      const box=sh.querySelector('#lg');
+      const future=st.date>todayS();
+      box.innerHTML=`<h2>Registrar cuidado</h2>
+      <div class="field"><span class="flab">Qué has hecho</span><div class="seg">${Object.entries(TYPES).map(([k,l])=>`<button type="button" aria-pressed="${st.type===k}" data-ty="${k}">${l}</button>`).join('')}</div></div>
+      <div class="field"><label for="lg-date">Día</label><div class="inline"><input type="date" id="lg-date" value="${st.date}"><button type="button" class="btn" data-q="0">Hoy</button><button type="button" class="btn" data-q="-1">Ayer</button></div>
+      ${st.type!=='riego'?`<label class="check" style="margin-top:6px"><input type="checkbox" id="lg-plan" ${st.planned||future?'checked':''}>Programado (aún no hecho)</label>`:future?'<span class="hint">Es una fecha futura: se guardará igualmente como riego hecho.</span>':''}</div>
+      <div class="field"><span class="flab">Plantas · cada una se guarda por separado</span><div class="frow">${ps.map(p=>`<button type="button" class="chip" style="--c:${p.color}" aria-pressed="${st.sel.has(p.id)}" data-pk="${p.id}"><span class="dot"></span>${esc(p.name)}</button>`).join('')}</div></div>
+      ${[...st.sel].map(id=>{const p=S.plants[id];if(!p)return'';return`<div class="prow"><div class="ph"><b><span class="mk" style="--c:${p.color}"></span>${esc(p.name)}</b>${st.type==='riego'?`<label class="check"><input type="checkbox" data-fe="${id}" ${st.fert[id]?'checked':''}>Con abono</label>`:''}</div><input type="text" id="note-${id}" data-no="${id}" placeholder="Nota opcional: pesaba poco, punta flácida…" value="${esc(st.note[id]||'')}"></div>`}).join('')}
+      <div class="foot"><button type="button" class="btn" data-x>Cancelar</button><div class="r"><button type="button" class="btn primary" data-save ${st.sel.size?'':'disabled'}>Guardar ${st.sel.size>1?st.sel.size+' registros':'registro'}</button></div></div>`;
+    };
+    draw();
+    sh.addEventListener('click',async e=>{
+      const b=e.target.closest('button');if(!b)return;
+      if(b.dataset.ty){st.type=b.dataset.ty;draw()}
+      else if(b.dataset.q!=null){st.date=ds(dn(todayS())+(+b.dataset.q));draw()}
+      else if(b.dataset.pk){const id=b.dataset.pk;st.sel.has(id)?st.sel.delete(id):st.sel.add(id);draw()}
+      else if(b.hasAttribute('data-x'))closeSheet();
+      else if(b.hasAttribute('data-save')){
+        b.disabled=true;const planEl=sh.querySelector('#lg-plan');const planned=st.type!=='riego'&&!!(planEl&&planEl.checked);
+        try{for(const id of st.sel){await store.addEvent({plant:id,type:st.type,date:st.date,fert:st.type==='riego'&&!!st.fert[id],note:(st.note[id]||'').trim(),planned,auto:false,created:new Date().toISOString()})}
+          closeSheet();toast(`${st.sel.size>1?st.sel.size+' registros guardados':'Registro guardado'}`)}
+        catch(err){b.disabled=false;toast(saveErr(err))}
+      }
+    });
+    sh.addEventListener('input',e=>{const t=e.target;
+      if(t.dataset.no)st.note[t.dataset.no]=t.value;
+      else if(t.dataset.fe)st.fert[t.dataset.fe]=t.checked;
+      else if(t.id==='lg-plan')st.planned=t.checked;});
+    sh.addEventListener('change',e=>{const t=e.target;if(t.id==='lg-date'&&t.value){st.date=t.value;draw()}});
+  });
+}
+function saveErr(err){const c=err&&err.code;return c==='readonly'?'Modo lectura: añade tu clave de GitHub en Ajustes para poder registrar.':c==='offline'?'No hay datos cargados de GitHub: recarga la página.':c==='quota_exceeded'?'No hay espacio para más registros. Borra algunos antiguos y vuelve a intentarlo.':c==='invalid_argument'?'No tienes permiso para guardar en esta página.':'No se ha podido guardar. Revisa la conexión y vuelve a intentarlo.'}
+
+function editEventSheet(id){
+  const e=S.events[id];if(!e)return;const ps=plantList(true);
+  openSheet(`<h2>Editar registro</h2>
+   <div class="field"><label for="ee-p">Planta</label><select id="ee-p">${ps.map(p=>`<option value="${p.id}" ${p.id===e.plant?'selected':''}>${esc(p.name)}</option>`).join('')}</select></div>
+   <div class="field"><label for="ee-t">Tipo</label><select id="ee-t">${Object.entries(TYPES).map(([k,l])=>`<option value="${k}" ${k===e.type?'selected':''}>${l}</option>`).join('')}</select></div>
+   <div class="field"><label for="ee-d">Día</label><input type="date" id="ee-d" value="${e.date}"></div>
+   <div class="field"><label class="check"><input type="checkbox" id="ee-f" ${e.fert?'checked':''}>Con abono (solo riegos)</label><label class="check"><input type="checkbox" id="ee-pl" ${e.planned?'checked':''}>Programado (aún no hecho)</label></div>
+   <div class="field"><label for="ee-n">Nota</label><textarea id="ee-n">${esc(e.note||'')}</textarea></div>
+   <div id="ee-c"></div>
+   <div class="foot"><button class="btn danger" data-del>Borrar</button><div class="r"><button class="btn" data-x>Cancelar</button><button class="btn primary" data-save>Guardar</button></div></div>`,sh=>{
+    sh.addEventListener('click',async ev=>{const b=ev.target.closest('button');if(!b)return;
+      if(b.hasAttribute('data-x'))closeSheet();
+      else if(b.hasAttribute('data-del'))sh.querySelector('#ee-c').innerHTML='<div class="confirm">¿Borrar este registro? <button class="btn danger" data-del2>Sí, borrar</button><button class="btn" data-x>No</button></div>';
+      else if(b.hasAttribute('data-del2')){await store.delEvent(id).catch(()=>{});closeSheet();toast('Registro borrado')}
+      else if(b.hasAttribute('data-save')){const t=sh.querySelector('#ee-t').value;
+        const d={...e,plant:sh.querySelector('#ee-p').value,type:t,date:sh.querySelector('#ee-d').value||e.date,fert:t==='riego'&&sh.querySelector('#ee-f').checked,planned:t!=='riego'&&sh.querySelector('#ee-pl').checked,note:sh.querySelector('#ee-n').value.trim()};delete d.id;
+        try{await store.setEvent(id,d);closeSheet();toast('Cambios guardados')}catch(err){toast(saveErr(err))}}
+    });
+  });
+}
+
+function plantSheet(id){
+  const isNew=!id;const ts=todayS();
+  const used=new Set(plantList(true).map(p=>p.color));
+  const p=isNew?{name:'',acquired:ts,location:'',pot:'',notes:'',color:COLORS.find(c=>!used.has(c))||COLORS[0],water:[...PRESETS.tropical.water],fertMonths:[...PRESETS.tropical.fm],fertEvery:21,order:99,archived:false}:JSON.parse(JSON.stringify(S.plants[id]));
+  const st=isNew?null:stats(S.plants[id]);const cm=mo(ts);
+  const hist=isNew?[]:evsOf(id).reverse();
+  if(!p.rest)p.rest=[0,0,0,0,0,0,0,0,0,0,0,0];
+  const s=st?statusOf(st):null;
+  const ficha=isNew?'':`<div class="ficha">
+     <div class="top">${pill(s)}${p.location?`<span class="when later">${ICON.pin}${esc(p.location)}</span>`:''}${p.pot?`<span class="when later">${ICON.pot}${esc(p.pot)}</span>`:''}</div>
+     <dl class="kv box">${plantKV(S.plants[id],st,true)}</dl>
+     ${p.notes?`<div class="box"><span class="flab">Notas de cuidado</span><p class="notes" style="margin:6px 0 0">${esc(p.notes)}</p></div>`:''}
+     <div style="display:flex;gap:8px;flex-wrap:wrap">${st.rest?'':`<button type="button" class="btn primary" data-qw>${ICON.drop}Regada hoy</button>`}<button type="button" class="btn" data-lg>Registrar con detalles</button></div>
+   </div>`;
+  openSheet(`<h2 id="sheet-title">${isNew?'Nueva planta':esc(p.name)}</h2>${ficha}
+   ${isNew?'':`<div class="field"><span class="flab">Historial (${hist.length})</span><div class="hist">${hist.length?hist.map(e=>`<div class="dline" style="--c:${p.color}"><i class="mk ${(MKCLASS[e.type]||'')+(e.fert?' fert':'')+(e.planned?' proj':'')}"></i><div class="txt"><div><b>${short(e.date)}/${e.date.slice(2,4)}</b> · ${TYPES[e.type]}${e.fert?'<span class="tag">abono</span>':''}${e.auto?'<span class="tag blue">automático</span>':''}${e.planned?'<span class="tag grey">programado</span>':''}</div>${e.note?`<div class="note">${esc(e.note)}</div>`:''}</div><button class="btn" data-ed="${e.id}">Editar</button></div>`).join(''):'<p class="hint">Sin registros.</p>'}</div></div>`}
+   ${isNew?'':'<details class="edit"><summary>Editar datos de la planta</summary>'}
+   ${isNew?`<div class="field"><span class="flab">Tipo de planta (rellena los intervalos)</span><div class="seg">${Object.entries(PRESETS).map(([k,v])=>`<button type="button" data-pre="${k}" aria-pressed="${k==='tropical'}">${v.label}</button>`).join('')}</div></div>`:''}
+   <div class="field"><label for="pl-n">Nombre</label><input type="text" id="pl-n" value="${esc(p.name)}" placeholder="Ej.: Monstera del salón"></div>
+   <div class="field"><label for="pl-a">Adquirida el</label><input type="date" id="pl-a" value="${p.acquired||''}"></div>
+   <div class="field"><label for="pl-l">Ubicación</label><input type="text" id="pl-l" value="${esc(p.location||'')}"></div>
+   <div class="field"><label for="pl-m">Maceta (Ø x alto)</label><input type="text" id="pl-m" value="${esc(p.pot||'')}" placeholder="10x9 cm"></div>
+   <div class="field"><label for="pl-w">Peso seco de referencia (opcional)</label><input type="text" id="pl-w" value="${esc(p.weight||'')}" placeholder="Ej.: ~340 g (regar cuando baje a este peso)"></div>
+   <div class="field"><span class="flab">Color</span><div class="colors">${COLORS.map(c=>`<button type="button" style="--c:${c}" data-col="${c}" aria-pressed="${c===p.color}" aria-label="Color ${c}"></button>`).join('')}</div></div>
+   <div class="field"><span class="flab">Días entre riegos, por mes</span><div class="months cur-m">${p.water.map((w,i)=>`<label class="${i===cm?'cur':''}">${MC[i]}<input type="number" min="1" max="120" id="w-${i}" value="${w}"></label>`).join('')}</div>
+     <span class="hint">${st&&st.avg?`Tu media real en los últimos riegos: cada ${st.avg} días. `:''}La previsión suma al último riego el mayor intervalo entre el mes en que regaste y el mes actual.</span></div>
+   <div class="field"><span class="flab">Meses en reposo (sin riego)</span><div class="months">${p.rest.map((f,i)=>`<button type="button" class="mtoggle rest" data-rm="${i}" aria-pressed="${!!f}" aria-label="${MES[i]}">${MC[i]}</button>`).join('')}</div><span class="hint">Ej.: mammillaria de noviembre a febrero. En esos meses no salen avisos de riego.</span></div>
+   <div class="field"><span class="flab">Meses de abonado</span><div class="months">${p.fertMonths.map((f,i)=>`<button type="button" class="mtoggle" data-fm="${i}" aria-pressed="${!!f}">${MC[i]}</button>`).join('')}</div></div>
+   <div class="field"><label for="pl-fe">Abonar cada (días, en temporada)</label><input type="number" id="pl-fe" min="7" max="120" value="${p.fertEvery||30}"></div>
+   <div class="field"><label for="pl-no">Notas de cuidado</label><textarea id="pl-no">${esc(p.notes||'')}</textarea></div>
+   ${isNew?'':'</details>'}
+   <div id="pl-c"></div>
+   <div class="foot">${isNew?'':`<div style="display:flex;gap:8px"><button class="btn" data-arch>${p.archived?'Recuperar':'Archivar'}</button><button class="btn danger" data-del>Eliminar</button></div>`}<div class="r"><button class="btn" data-x>Cancelar</button><button class="btn primary" data-save>Guardar</button></div></div>`,sh=>{
+    sh.addEventListener('click',async ev=>{const b=ev.target.closest('button');if(!b)return;
+      if(b.dataset.pre){const pr=PRESETS[b.dataset.pre];pr.water.forEach((w,i)=>sh.querySelector('#w-'+i).value=w);p.fertMonths=[...pr.fm];sh.querySelectorAll('[data-fm]').forEach(x=>x.setAttribute('aria-pressed',!!p.fertMonths[+x.dataset.fm]));sh.querySelector('#pl-fe').value=pr.fe;sh.querySelectorAll('[data-pre]').forEach(x=>x.setAttribute('aria-pressed',x===b))}
+      else if(b.dataset.col){p.color=b.dataset.col;sh.querySelectorAll('[data-col]').forEach(x=>x.setAttribute('aria-pressed',x===b))}
+      else if(b.dataset.fm){const i=+b.dataset.fm;p.fertMonths[i]=p.fertMonths[i]?0:1;b.setAttribute('aria-pressed',!!p.fertMonths[i])}
+      else if(b.dataset.rm){const i=+b.dataset.rm;p.rest[i]=p.rest[i]?0:1;b.setAttribute('aria-pressed',!!p.rest[i])}
+      else if(b.hasAttribute('data-qw')){closeSheet();await quick(id,false)}
+      else if(b.hasAttribute('data-lg')){logSheet({plants:[id]})}
+      else if(b.dataset.ed){editEventSheet(b.dataset.ed)}
+      else if(b.hasAttribute('data-x'))closeSheet();
+      else if(b.hasAttribute('data-arch')){const d={...S.plants[id],archived:!p.archived};delete d.id;await store.setPlant(id,d).catch(err=>toast(saveErr(err)));closeSheet()}
+      else if(b.hasAttribute('data-del'))sh.querySelector('#pl-c').innerHTML=`<div class="confirm">¿Eliminar ${esc(p.name)} y sus ${hist.length} registros? No se puede deshacer. <button class="btn danger" data-del2>Sí, eliminar</button><button class="btn" data-x>No</button></div>`;
+      else if(b.hasAttribute('data-del2')){b.disabled=true;for(const e of hist)await store.delEvent(e.id).catch(()=>{});await store.delPlant(id).catch(()=>{});closeSheet();toast('Planta eliminada')}
+      else if(b.hasAttribute('data-save')){
+        const name=sh.querySelector('#pl-n').value.trim();if(!name){sh.querySelector('#pl-n').focus();return}
+        const d={name,acquired:sh.querySelector('#pl-a').value||ts,location:sh.querySelector('#pl-l').value.trim(),pot:sh.querySelector('#pl-m').value.trim(),color:p.color,
+          water:MC.map((_,i)=>Math.max(1,Math.min(120,Math.round(+sh.querySelector('#w-'+i).value)||14))),fertMonths:p.fertMonths.map(x=>x?1:0),fertEvery:Math.max(7,Math.round(+sh.querySelector('#pl-fe').value)||30),
+          notes:sh.querySelector('#pl-no').value.trim(),order:p.order??99,archived:!!p.archived,
+          weight:sh.querySelector('#pl-w').value.trim(),rest:p.rest.map(x=>x?1:0)};
+        if(!d.weight)delete d.weight;if(!d.rest.some(Boolean))delete d.rest;
+        const nid=id||(name.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'planta')+'-'+Date.now().toString(36).slice(-4);
+        try{await store.setPlant(nid,d);closeSheet();toast(isNew?'Planta añadida':'Planta guardada')}catch(err){toast(saveErr(err))}
+      }
+    });
+  });
+}
+
+// ---------- toast ----------
+let toastT;
+function toast(msg,undo){const t=document.getElementById('toast');clearTimeout(toastT);
+  t.innerHTML=`<div class="toast" role="status">${esc(msg)}${undo?'<button class="linkbtn" id="undo">Deshacer</button>':''}</div>`;
+  if(undo)t.querySelector('#undo').onclick=()=>{undo();t.innerHTML=''};
+  toastT=setTimeout(()=>t.innerHTML='',undo?6000:2600)}
+
+// ---------- events ----------
+async function quick(pid,fert){
+  try{const id=await store.addEvent({plant:pid,type:'riego',date:todayS(),fert:!!fert,note:'',planned:false,auto:false,created:new Date().toISOString()});
+    toast(`${S.plants[pid].name}: ${fert?'riego con abono':'riego'} guardado`,()=>store.delEvent(id))}catch(err){toast(saveErr(err))}
+}
+document.addEventListener('click',async e=>{
+  if(e.target.closest('#modal'))return;
+  const tab=e.target.closest('[data-tab]');if(tab){S.tab=tab.dataset.tab;lsSet('rc-tab',S.tab);render();return}
+  const tp=e.target.closest('[data-tp]');if(tp){const id=tp.dataset.tp;S.hidP.has(id)?S.hidP.delete(id):S.hidP.add(id);saveFilters();render();return}
+  const tt=e.target.closest('[data-tt]');if(tt){const k=tt.dataset.tt;S.hidT.has(k)?S.hidT.delete(k):S.hidT.add(k);saveFilters();render();return}
+  const day=e.target.closest('[data-day]');if(day){const d=day.dataset.day;S.sel=d;if(mo(d)!==S.m||+d.slice(0,4)!==S.y){S.y=+d.slice(0,4);S.m=mo(d)}render();return}
+  const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act;
+  if(a==='gohoy'){S.tab='hoy';lsSet('rc-tab','hoy');render();window.scrollTo({top:0,behavior:'smooth'})}
+  else if(a==='allp'){S.hidP.clear();saveFilters();render()}
+  else if(a==='nonep'){plantList().forEach(p=>S.hidP.add(p.id));saveFilters();render()}
+  else if(a==='prevm'){S.m--;if(S.m<0){S.m=11;S.y--}render()}
+  else if(a==='nextm'){S.m++;if(S.m>11){S.m=0;S.y++}render()}
+  else if(a==='quick'||a==='quickfert'){if(b.classList.contains('done'))return;b.classList.add('done');b.innerHTML=CK+(a==='quickfert'?'Abonada':'Regada');await new Promise(r=>setTimeout(r,520));await quick(b.dataset.p,a==='quickfert')}
+  else if(a==='log')logSheet({plants:[b.dataset.p]});
+  else if(a==='logday')logSheet({date:b.dataset.d});
+  else if(a==='editev')editEventSheet(b.dataset.e);
+  else if(a==='plant')plantSheet(b.dataset.p);
+  else if(a==='newplant')plantSheet(null);
+  else if(a==='plandone'){const ev=S.events[b.dataset.e];if(ev){const d={...ev,planned:false,date:todayS()};delete d.id;await store.setEvent(b.dataset.e,d).catch(err=>toast(saveErr(err)));toast(TYPES[ev.type]+' marcado como hecho')}}
+});
+document.getElementById('fab').addEventListener('click',()=>logSheet({date:S.tab==='cal'?S.sel:todayS()}));
+// refresh "today" after midnight while open
+let lastDay=todayS();setInterval(()=>{if(todayS()!==lastDay){lastDay=todayS();render()}},60000);
+boot();
+</script>
